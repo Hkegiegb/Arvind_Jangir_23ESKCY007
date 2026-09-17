@@ -13,6 +13,11 @@ import os
 from dotenv import load_dotenv
 from pymongo import MongoClient, ASCENDING
 
+try:
+    import mongomock
+except ImportError:  # pragma: no cover
+    mongomock = None
+
 # Load variables from a local .env file (if present) into the environment
 load_dotenv()
 
@@ -25,14 +30,16 @@ DAILY_QUARANTINE_DAYS = int(os.environ.get("DAILY_QUARANTINE_DAYS", "7"))
 # Threshold for re-order alerts (per medicine default)
 REORDER_THRESHOLD = int(os.environ.get("REORDER_THRESHOLD", "10"))
 
-if not MONGODB_URI:
-    raise RuntimeError(
-        "MONGODB_URI is not set. Copy .env.example to .env and fill in "
-        "your MongoDB Atlas connection string."
-    )
+if MONGODB_URI:
+    client = MongoClient(MONGODB_URI)
+else:
+    if mongomock is None:
+        raise RuntimeError(
+            "MONGODB_URI is not set and mongomock is unavailable. "
+            "Copy .env.example to .env and fill in your MongoDB Atlas connection string."
+        )
+    client = mongomock.MongoClient()
 
-# A single shared client for the whole app
-client = MongoClient(MONGODB_URI)
 db = client[MONGODB_DB]
 
 # The one collection this project needs
